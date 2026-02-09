@@ -33,7 +33,7 @@ claude mcp add --transport stdio ww ./target/release/ww-client -- --server wss:/
 
 ## Usage
 
-Once registered, use the `/ww` slash command in Claude Code to connect and play.
+Once registered, use the `/wyvern` slash command in Claude Code to connect and play.
 
 ## License
 
