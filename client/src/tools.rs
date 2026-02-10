@@ -261,18 +261,20 @@ pub struct GameHandler {
     connection: Arc<Mutex<GameConnection>>,
     events: Arc<Mutex<EventBuffer>>,
     server_url: String,
+    token_path: String,
     tool_router: ToolRouter<Self>,
 }
 
 #[tool_router]
 impl GameHandler {
-    /// Creates a new handler targeting `server_url`.
-    pub fn new(server_url: String) -> Self {
+    /// Creates a new handler targeting `server_url` with token storage at `token_path`.
+    pub fn new(server_url: String, token_path: String) -> Self {
         let (event_tx, event_rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
             connection: Arc::new(Mutex::new(GameConnection::new(event_tx))),
             events: Arc::new(Mutex::new(EventBuffer::new(event_rx))),
             server_url,
+            token_path,
             tool_router: Self::tool_router(),
         }
     }
@@ -297,13 +299,40 @@ impl GameHandler {
             .await
             .map_err(|e| rmcp::ErrorData::internal_error(e.to_string(), None))?;
 
+        // Use provided token, or try reading from per-username token file
+        let token = if params.token.is_empty() {
+            self.read_token_for(&params.username)
+        } else {
+            params.token
+        };
+
+        let username = params.username.clone();
         let auth_params = serde_json::json!({
-            "username": params.username,
-            "token": params.token,
+            "username": username,
+            "token": token,
         });
 
         drop(conn);
-        self.send_and_drain("connect", auth_params).await
+        let result = self.send_and_drain("connect", auth_params).await?;
+
+        // If server returned a new account token, save it to disk
+        if let Some(content) = result.content.first() {
+            if let Some(text_content) = content.as_text() {
+                if let Ok(parsed) = serde_json::from_str::<Value>(&text_content.text) {
+                    if let Some(result_obj) = parsed.get("result") {
+                        if result_obj.get("new_account").and_then(Value::as_bool) == Some(true) {
+                            if let Some(new_token) =
+                                result_obj.get("token").and_then(|v| v.as_str())
+                            {
+                                self.write_token_for(&username, new_token);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(result)
     }
 
     /// Disconnect from the game world. Saves your character.
@@ -858,4 +887,62 @@ impl GameHandler {
             combined.to_string(),
         )]))
     }
+
+    /// Reads the token for a specific username, returning empty string if unavailable.
+    ///
+    /// Tokens are stored per-username at `<token_path>/tokens/<username>`.
+    /// Falls back to the legacy single-file `<token_path>/token` if the
+    /// per-username file doesn't exist (one-time migration path).
+    fn read_token_for(&self, username: &str) -> String {
+        let base = expand_tilde(&self.token_path);
+        let base = std::path::Path::new(&base);
+
+        // Try per-username path first
+        let per_user = base.join("tokens").join(username);
+        if let Ok(contents) = std::fs::read_to_string(&per_user) {
+            return contents.trim().to_owned();
+        }
+
+        // Fall back to legacy single-file path for migration
+        let legacy = base.join("token");
+        if let Ok(contents) = std::fs::read_to_string(&legacy) {
+            let token = contents.trim().to_owned();
+            if !token.is_empty() {
+                tracing::info!(username, "token.migrating_legacy_file");
+                // Migrate: write to per-username, delete legacy
+                self.write_token_for(username, &token);
+                let _ = std::fs::remove_file(&legacy);
+            }
+            return token;
+        }
+
+        String::new()
+    }
+
+    /// Writes a token for a specific username, creating directories as needed.
+    ///
+    /// Tokens are stored at `<token_path>/tokens/<username>`.
+    fn write_token_for(&self, username: &str, token: &str) {
+        let base = expand_tilde(&self.token_path);
+        let base = std::path::Path::new(&base);
+        let tokens_dir = base.join("tokens");
+        if let Err(err) = std::fs::create_dir_all(&tokens_dir) {
+            tracing::warn!(error = %err, "token.dir.create.failed");
+            return;
+        }
+        let path = tokens_dir.join(username);
+        if let Err(err) = std::fs::write(&path, token) {
+            tracing::warn!(error = %err, username, "token.file.write.failed");
+        }
+    }
+}
+
+/// Expands a leading `~` in a path to the user's home directory.
+fn expand_tilde(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Some(home) = std::env::var_os("HOME") {
+            return format!("{}/{rest}", home.to_string_lossy());
+        }
+    }
+    path.to_owned()
 }

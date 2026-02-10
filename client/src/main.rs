@@ -25,8 +25,8 @@ struct Args {
     #[arg(long, default_value = "ws://localhost:8080/ws")]
     server: String,
 
-    /// Path to the authentication token file.
-    #[arg(long, default_value = "~/.weights-and-wyverns/token")]
+    /// Base directory for authentication token storage.
+    #[arg(long, default_value = "~/.weights-and-wyverns")]
     token_path: String,
 }
 
@@ -46,7 +46,7 @@ async fn main() -> anyhow::Result<()> {
         "mcp.server.starting"
     );
 
-    let handler = tools::GameHandler::new(args.server);
+    let handler = tools::GameHandler::new(args.server, args.token_path);
     let service = handler.serve(rmcp::transport::stdio()).await?;
     service.waiting().await?;
 
