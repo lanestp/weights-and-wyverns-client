@@ -10,7 +10,7 @@ keywords = ["mcp", "mud", "game", "ww"]
 categories = ["games"]
 
 [[bin]]
-name = "wyvern"
+name = "ww-client"
 path = "src/main.rs"
 
 [dependencies]
@@ -24,6 +24,7 @@ serde_json = "1"
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "logging", "std", "tls12"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1", features = ["v4", "serde"] }

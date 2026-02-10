@@ -101,8 +101,24 @@ impl GameConnection {
     /// Returns `ConnectionError::Connect` if the WebSocket handshake fails.
     pub async fn connect(&mut self, url: impl AsRef<str>) -> Result<(), ConnectionError> {
         let url = url.as_ref();
+        let request = tokio_tungstenite::tungstenite::http::Request::builder()
+            .uri(url)
+            .header(
+                "User-Agent",
+                concat!("wyvern-client/", env!("CARGO_PKG_VERSION")),
+            )
+            .header("Connection", "Upgrade")
+            .header("Upgrade", "websocket")
+            .header("Sec-WebSocket-Version", "13")
+            .header(
+                "Sec-WebSocket-Key",
+                tokio_tungstenite::tungstenite::handshake::client::generate_key(),
+            )
+            .header("Host", url_host(url))
+            .body(())
+            .expect("valid WebSocket request");
         let (ws_stream, _response) =
-            tokio_tungstenite::connect_async(url)
+            tokio_tungstenite::connect_async(request)
                 .await
                 .map_err(|e| ConnectionError::Connect {
                     url: url.to_owned(),
@@ -252,6 +268,17 @@ async fn route_message(
 
     // Otherwise treat it as a push event.
     let _ = event_tx.send(value);
+}
+
+/// Extracts the host (with optional port) from a URL string.
+fn url_host(url: &str) -> String {
+    url.split("://")
+        .nth(1)
+        .unwrap_or(url)
+        .split('/')
+        .next()
+        .unwrap_or("localhost")
+        .to_owned()
 }
 
 #[cfg(test)]

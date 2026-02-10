@@ -32,6 +32,11 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    // Install rustls crypto provider before any TLS operations.
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("failed to install rustls crypto provider");
+
     // Logging must go to stderr — stdout is reserved for the MCP protocol.
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
