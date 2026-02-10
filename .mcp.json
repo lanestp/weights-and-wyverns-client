@@ -2,7 +2,7 @@
   "mcpServers": {
     "wyvern": {
       "type": "stdio",
-      "command": "./client/target/release/ww-client",
+      "command": "./client/target/release/wyvern",
       "args": ["--server", "wss://wyverns.ai/ws"]
     }
   }

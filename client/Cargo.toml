@@ -10,7 +10,7 @@ keywords = ["mcp", "mud", "game", "ww"]
 categories = ["games"]
 
 [[bin]]
-name = "ww-client"
+name = "wyvern"
 path = "src/main.rs"
 
 [dependencies]

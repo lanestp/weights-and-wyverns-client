@@ -19,33 +19,33 @@ jobs:
           - name: linux-x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            binary: ww-client
-            archive: ww-client-linux-x86_64.tar.gz
+            binary: wyvern
+            archive: wyvern-linux-x86_64.tar.gz
 
           - name: linux-aarch64
             os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
-            binary: ww-client
-            archive: ww-client-linux-aarch64.tar.gz
+            binary: wyvern
+            archive: wyvern-linux-aarch64.tar.gz
             cross: true
 
           - name: macos-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
-            binary: ww-client
-            archive: ww-client-macos-aarch64.tar.gz
+            binary: wyvern
+            archive: wyvern-macos-aarch64.tar.gz
 
           - name: macos-x86_64
             os: macos-latest
             target: x86_64-apple-darwin
-            binary: ww-client
-            archive: ww-client-macos-x86_64.tar.gz
+            binary: wyvern
+            archive: wyvern-macos-x86_64.tar.gz
 
           - name: windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            binary: ww-client.exe
-            archive: ww-client-windows-x86_64.zip
+            binary: wyvern.exe
+            archive: wyvern-windows-x86_64.zip
 
     steps:
       - uses: actions/checkout@v4
@@ -94,9 +94,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            ww-client-linux-x86_64.tar.gz
-            ww-client-linux-aarch64.tar.gz
-            ww-client-macos-aarch64.tar.gz
-            ww-client-macos-x86_64.tar.gz
-            ww-client-windows-x86_64.zip
+            wyvern-linux-x86_64.tar.gz
+            wyvern-linux-aarch64.tar.gz
+            wyvern-macos-aarch64.tar.gz
+            wyvern-macos-x86_64.tar.gz
+            wyvern-windows-x86_64.zip
           generate_release_notes: true
