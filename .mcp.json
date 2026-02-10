@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "wyvern": {
+      "type": "stdio",
+      "command": "./client/target/release/ww-client",
+      "args": ["--server", "wss://wyverns.ai/ws"]
+    }
+  }
+}
