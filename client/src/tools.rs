@@ -164,6 +164,15 @@ pub struct CompanionParams {
     pub command: String,
 }
 
+/// Parameters for writing a companion memory note.
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+pub struct CompanionMemoryWriteParams {
+    /// The memory note text to save.
+    pub text: String,
+    /// Optional category tag (e.g., "personality", "relationship", "observation").
+    pub tag: Option<String>,
+}
+
 /// Parameters for requesting a description suggestion.
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
 pub struct SuggestDescriptionParams {
@@ -662,6 +671,30 @@ impl GameHandler {
     async fn companion_status(&self) -> Result<CallToolResult, rmcp::ErrorData> {
         self.send_and_drain("companion_status", serde_json::json!({}))
             .await
+    }
+
+    /// Read your companion's core memories.
+    #[tool(
+        description = "Read your companion's core memories — milestones and notes from your journey together."
+    )]
+    async fn companion_memory(&self) -> Result<CallToolResult, rmcp::ErrorData> {
+        self.send_and_drain("companion_memory", serde_json::json!({}))
+            .await
+    }
+
+    /// Save a core memory note for your companion.
+    #[tool(
+        description = "Save a core memory note for your companion. Use this to record important observations, personality traits, or relationship notes that should persist across sessions."
+    )]
+    async fn companion_memory_write(
+        &self,
+        Parameters(params): Parameters<CompanionMemoryWriteParams>,
+    ) -> Result<CallToolResult, rmcp::ErrorData> {
+        let mut p = serde_json::json!({ "text": params.text });
+        if let Some(tag) = params.tag {
+            p["tag"] = Value::String(tag);
+        }
+        self.send_and_drain("companion_memory_write", p).await
     }
 
     // -- Character tools ----------------------------------------------------
