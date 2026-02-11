@@ -46,6 +46,19 @@ curl -sL https://wyverns.ai/static/wyvern-skill.md -o .claude/commands/wyvern.md
 
 Start a new Claude Code session and type `/wyvern`.
 
+## Voice Narration (Optional)
+
+Add text-to-speech narration via ElevenLabs using the [voice bridge](https://github.com/lanestp/weights-and-wyverns-voice). Hear room descriptions, combat, and NPC dialogue spoken aloud. Requires Node.js 18+, Chrome, and an ElevenLabs API key.
+
+```bash
+git clone https://github.com/lanestp/weights-and-wyverns-voice.git
+cd weights-and-wyverns-voice
+npm install && npm run build
+claude mcp add -t stdio wyvern-voice node ./build/index.js
+```
+
+Then open http://localhost:3001 in Chrome and paste your ElevenLabs API key.
+
 ## Build from Source
 
 Requires [Rust](https://rustup.rs/) 1.75+.
@@ -61,6 +74,11 @@ Then register the built binary:
 ```bash
 claude mcp add -t stdio wyvern ./target/release/wyvern -- --server wss://wyverns.ai/ws
 ```
+
+## Related
+
+- [wyverns.ai](https://wyverns.ai) — Landing page, story, design docs, and setup guide
+- [weights-and-wyverns-voice](https://github.com/lanestp/weights-and-wyverns-voice) — Optional voice narration bridge
 
 ## License
 
