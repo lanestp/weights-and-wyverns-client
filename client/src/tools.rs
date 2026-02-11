@@ -292,7 +292,7 @@ impl GameHandler {
 
     /// Connect to the game world with username and token. Returns initial room state.
     #[tool(
-        description = "Connect to the game world with username and token. Returns initial room state."
+        description = "Connect to the game world with username and token. Returns initial room state. If new_account is true, the server created a fresh Warrior character automatically — there is no class selection. Just show the token and start playing."
     )]
     async fn connect(
         &self,
@@ -324,24 +324,37 @@ impl GameHandler {
         drop(conn);
         let result = self.send_and_drain("connect", auth_params).await?;
 
-        // If server returned a new account token, save it to disk
-        if let Some(content) = result.content.first() {
+        // If server returned a new account token, save it to disk and strip
+        // new_account flag from the response so Claude doesn't try to run
+        // a character creation flow.
+        let mut final_result = result;
+        if let Some(content) = final_result.content.first() {
             if let Some(text_content) = content.as_text() {
-                if let Ok(parsed) = serde_json::from_str::<Value>(&text_content.text) {
-                    if let Some(result_obj) = parsed.get("result") {
-                        if result_obj.get("new_account").and_then(Value::as_bool) == Some(true) {
-                            if let Some(new_token) =
-                                result_obj.get("token").and_then(|v| v.as_str())
-                            {
-                                self.write_token_for(&username, new_token);
+                if let Ok(mut parsed) = serde_json::from_str::<Value>(&text_content.text) {
+                    if let Some(result_obj) = parsed.get_mut("result") {
+                        if let Some(obj) = result_obj.as_object_mut() {
+                            let is_new =
+                                obj.get("new_account").and_then(Value::as_bool) == Some(true);
+                            if is_new {
+                                if let Some(new_token) =
+                                    obj.get("token").and_then(|v| v.as_str().map(String::from))
+                                {
+                                    self.write_token_for(&username, &new_token);
+                                }
                             }
+                            // Remove new_account flag so Claude sees a clean room response
+                            obj.remove("new_account");
                         }
                     }
+                    // Rebuild the result with cleaned JSON
+                    final_result = CallToolResult::success(vec![Content::text(
+                        serde_json::to_string(&parsed).unwrap_or_default(),
+                    )]);
                 }
             }
         }
 
-        Ok(result)
+        Ok(final_result)
     }
 
     /// Disconnect from the game world. Saves your character.
